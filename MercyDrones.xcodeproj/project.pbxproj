@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		4D0000000000000000000007 /* UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000005 /* UI.swift */; };
+		4D0000000000000000000013 /* IncidentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000012 /* IncidentMap.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		4D0000000000000000000004 /* MercyDrones.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MercyDrones.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D0000000000000000000005 /* UI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI.swift; sourceTree = "<group>"; };
+		4D0000000000000000000012 /* IncidentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentMap.swift; sourceTree = "<group>"; };
 		4D0000000000000000000006 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -31,6 +33,7 @@
 			isa = PBXGroup;
 			children = (
 				4D0000000000000000000005 /* UI.swift */,
+				4D0000000000000000000012 /* IncidentMap.swift */,
 				4D0000000000000000000006 /* README.md */,
 				4D0000000000000000000003 /* Products */,
 			);
@@ -113,6 +116,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D0000000000000000000007 /* UI.swift in Sources */,
+				4D0000000000000000000013 /* IncidentMap.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,7 +173,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -224,7 +228,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -242,6 +246,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MercyDrones;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Shows your position on the incident map so you can navigate to victims and drones.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -268,6 +273,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MercyDrones;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Shows your position on the incident map so you can navigate to victims and drones.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

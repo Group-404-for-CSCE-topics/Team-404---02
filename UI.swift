@@ -5,8 +5,9 @@
 //  Built from mercydrones-wireframes.html. Every button is a placeholder:
 //  no flight control, networking, camera, or payload logic is implemented.
 //  The only state here is UI state (selected tab, toggles, drone names).
+//  The exception is the live map, which lives in IncidentMap.swift.
 //
-//  Requires iOS 16+ (NavigationStack, presentationDetents).
+//  Requires iOS 18+ (the map uses SwiftUI's MapKit content API).
 //
 
 import SwiftUI
@@ -427,30 +428,6 @@ struct MapPlaceholder<Overlay: View>: View {
     }
 }
 
-struct DronePin: View {
-    let name: String
-    var hovering = false
-
-    var body: some View {
-        VStack(spacing: 3) {
-            ZStack {
-                Circle().fill(Theme.blue.opacity(0.2)).frame(width: 30, height: 30)
-                Circle()
-                    .fill(hovering ? Theme.blue : Theme.surface)
-                    .frame(width: 14, height: 14)
-                    .overlay(Circle().stroke(Theme.blue, lineWidth: 3))
-            }
-            Text(name)
-                .font(.caption2.weight(.semibold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Theme.surface)
-                .foregroundColor(Theme.textPrimary)
-                .clipShape(Capsule())
-        }
-    }
-}
-
 // MARK: - 01 Fleet
 
 struct FleetView: View {
@@ -745,46 +722,9 @@ struct LiveMapView: View {
 }
 
 struct OverviewContent: View {
-    @EnvironmentObject private var store: PrototypeStore
-
     var body: some View {
-        MapPlaceholder(height: 300) {
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Theme.green, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
-                        .background(Theme.green.opacity(0.08))
-                        .frame(width: w * 0.72, height: h * 0.62)
-                        .position(x: w * 0.5, y: h * 0.46)
-                    Text("SEARCH ZONE A")
-                        .font(.caption2.weight(.bold))
-                        .foregroundColor(Theme.green)
-                        .position(x: w * 0.26, y: h * 0.2)
-
-                    DronePin(name: store.name(at: 0)).position(x: w * 0.36, y: h * 0.44)
-                    DronePin(name: store.name(at: 1), hovering: true).position(x: w * 0.7, y: h * 0.62)
-
-                    VStack(spacing: 2) {
-                        Text("3").font(.headline.weight(.bold))
-                        Text("victims").font(.caption2)
-                    }
-                    .foregroundColor(.white)
-                    .frame(width: 58, height: 50)
-                    .background(Theme.danger)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .position(x: w * 0.6, y: h * 0.32)
-                }
-            }
-        }
-
-        HStack(spacing: 14) {
-            LegendItem(symbol: "circle", label: "in flight", color: Theme.blue)
-            LegendItem(symbol: "circle.fill", label: "hovering", color: Theme.blue)
-            LegendItem(symbol: "square.fill", label: "victim cluster", color: Theme.danger)
-        }
-        .font(.caption)
+        IncidentMapCard()
+        MapLegend()
 
         HStack(spacing: 10) {
             StatTile(label: "Wind", value: "14 mph NE", icon: "wind")
@@ -897,22 +837,11 @@ struct FireContent: View {
     }
 }
 
-struct Detection: Identifiable {
-    let id: Int
-    let title: String
-    let coords: String
-    let confidence: Double
-}
-
 struct VictimContent: View {
     @EnvironmentObject private var store: PrototypeStore
     @State private var marked: Set<Int> = []
 
-    private let detections = [
-        Detection(id: 1, title: "Victim 01 · behind rubble", coords: "34.0501, -118.2402", confidence: 0.94),
-        Detection(id: 2, title: "Victim 02 · street level", coords: "34.0498, -118.2410", confidence: 0.71),
-        Detection(id: 3, title: "Possible · near vehicle", coords: "34.0507, -118.2395", confidence: 0.51)
-    ]
+    private let detections = Detection.zoneA
 
     var body: some View {
         GeometryReader { geo in
