@@ -7,3 +7,6 @@ build/
 # macOS
 .DS_Store
 mercydrones-wireframes.html
+
+# Google Maps API key (see Maps.xcconfig)
+Secrets.xcconfig

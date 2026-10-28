@@ -7,7 +7,8 @@
 //  The only state here is UI state (selected tab, toggles, drone names).
 //  The exception is the live map, which lives in IncidentMap.swift.
 //
-//  Requires iOS 18+ (the map uses SwiftUI's MapKit content API).
+//  Requires iOS 18+. The map uses the Google Maps SDK (see IncidentMap.swift
+//  and the README for the API key setup).
 //
 
 import SwiftUI
@@ -18,6 +19,10 @@ import SwiftUI
 struct MercyDronesApp: App {
     @StateObject private var store = PrototypeStore()
     @AppStorage("appearance") private var appearance: Appearance = .system
+
+    init() {
+        GoogleMapsConfig.configure()
+    }
 
     var body: some Scene {
         WindowGroup {

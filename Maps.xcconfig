@@ -1,0 +1,9 @@
+// Google Maps API key wiring. Don't put the key in this file — it's committed.
+//
+// Create Secrets.xcconfig next to this file (it's gitignored) containing:
+//   GOOGLE_MAPS_API_KEY = your-key-here
+//
+// Without it the app still builds and shows the offline map.
+
+GOOGLE_MAPS_API_KEY =
+#include? "Secrets.xcconfig"
