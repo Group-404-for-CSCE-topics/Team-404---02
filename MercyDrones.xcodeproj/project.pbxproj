@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		4D0000000000000000000007 /* UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000005 /* UI.swift */; };
 		4D0000000000000000000013 /* IncidentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000012 /* IncidentMap.swift */; };
+		4D0000000000000000000019 /* MapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D000000000000000000001A /* MapAnnotations.swift */; };
 		4D0000000000000000000016 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4D0000000000000000000015 /* GoogleMaps */; };
 /* End PBXBuildFile section */
 
@@ -16,6 +17,7 @@
 		4D0000000000000000000004 /* MercyDrones.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MercyDrones.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D0000000000000000000005 /* UI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI.swift; sourceTree = "<group>"; };
 		4D0000000000000000000012 /* IncidentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentMap.swift; sourceTree = "<group>"; };
+		4D000000000000000000001A /* MapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapAnnotations.swift; sourceTree = "<group>"; };
 		4D0000000000000000000006 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		4D0000000000000000000017 /* Maps.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Maps.xcconfig; sourceTree = "<group>"; };
 		4D0000000000000000000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -38,6 +40,7 @@
 			children = (
 				4D0000000000000000000005 /* UI.swift */,
 				4D0000000000000000000012 /* IncidentMap.swift */,
+				4D000000000000000000001A /* MapAnnotations.swift */,
 				4D0000000000000000000017 /* Maps.xcconfig */,
 				4D0000000000000000000018 /* Info.plist */,
 				4D0000000000000000000006 /* README.md */,
@@ -129,6 +132,7 @@
 			files = (
 				4D0000000000000000000007 /* UI.swift in Sources */,
 				4D0000000000000000000013 /* IncidentMap.swift in Sources */,
+				4D0000000000000000000019 /* MapAnnotations.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
