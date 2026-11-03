@@ -5,9 +5,11 @@
 //  Built from mercydrones-wireframes.html. Every button is a placeholder:
 //  no flight control, networking, camera, or payload logic is implemented.
 //  The only state here is UI state (selected tab, toggles, drone names).
-//  The exception is the live map, which lives in IncidentMap.swift.
+//  The exception is the live map, which lives in IncidentMap.swift, and the
+//  pins and boundaries responders add to it (MapAnnotations.swift).
 //
-//  Requires iOS 18+ (the map uses SwiftUI's MapKit content API).
+//  Requires iOS 18+. The map uses the Google Maps SDK (see IncidentMap.swift
+//  and the README for the API key setup).
 //
 
 import SwiftUI
@@ -17,12 +19,19 @@ import SwiftUI
 @main
 struct MercyDronesApp: App {
     @StateObject private var store = PrototypeStore()
+    /// Responder pins and boundaries. Pass `sync:` here to share them with the crew.
+    @StateObject private var annotations = MapAnnotationStore()
     @AppStorage("appearance") private var appearance: Appearance = .system
+
+    init() {
+        GoogleMapsConfig.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
             RootTabView()
                 .environmentObject(store)
+                .environmentObject(annotations)
                 .preferredColorScheme(appearance.colorScheme)
                 .tint(Theme.blue)
         }
@@ -1288,6 +1297,7 @@ struct MercyDrones_Previews: PreviewProvider {
                 .previewDisplayName("Dark")
         }
         .environmentObject(PrototypeStore())
+        .environmentObject(MapAnnotationStore(fileURL: nil))
         .tint(Theme.blue)
     }
 }
