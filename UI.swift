@@ -2,11 +2,14 @@
 //  UI.swift
 //  MercyDrones — first responder console (UI prototype only)
 //
-//  Built from mercydrones-wireframes.html. Every button is a placeholder:
-//  no flight control, networking, camera, or payload logic is implemented.
-//  The only state here is UI state (selected tab, toggles, drone names).
+//  Built from mercydrones-wireframes.html. Most buttons are placeholders:
+//  no flight control, camera, or payload logic is implemented. The real data
+//  is the live map (IncidentMap.swift), the pins and boundaries responders add
+//  to it (MapAnnotations.swift), the Alerts & log those feed (IncidentLog.swift),
+//  and the fleet (FleetFeed.swift), which stays empty until drones are connected.
 //
-//  Requires iOS 16+ (NavigationStack, presentationDetents).
+//  Requires iOS 18+. The map uses the Google Maps SDK (see IncidentMap.swift
+//  and the README for the API key setup).
 //
 
 import SwiftUI
@@ -15,13 +18,29 @@ import SwiftUI
 
 @main
 struct MercyDronesApp: App {
+    // Cloud hook-up: each store takes a backend that does nothing by default.
+    //   PrototypeStore(feed:)       live drones          FleetFeed.swift
+    //   IncidentLog(sync:)          Alerts & log         IncidentLog.swift
+    //   MapAnnotationStore(sync:)   pins and boundaries  MapAnnotations.swift
     @StateObject private var store = PrototypeStore()
+    @StateObject private var log: IncidentLog
+    @StateObject private var annotations: MapAnnotationStore
     @AppStorage("appearance") private var appearance: Appearance = .system
+
+    init() {
+        GoogleMapsConfig.configure()
+        // Pins and boundaries write their adds and deletes to the log.
+        let log = IncidentLog()
+        _log = StateObject(wrappedValue: log)
+        _annotations = StateObject(wrappedValue: MapAnnotationStore(log: log))
+    }
 
     var body: some Scene {
         WindowGroup {
             RootTabView()
                 .environmentObject(store)
+                .environmentObject(log)
+                .environmentObject(annotations)
                 .preferredColorScheme(appearance.colorScheme)
                 .tint(Theme.blue)
         }
@@ -105,16 +124,19 @@ enum AppTab: Hashable {
 
 enum DroneStatus: String {
     case inFlight = "In flight"
+    case hovering = "Hovering"
     case docked = "Docked"
     case charging = "Charging"
 
     var color: Color {
         switch self {
-        case .inFlight: return Theme.green
-        case .docked:   return Theme.blue
-        case .charging: return Theme.warning
+        case .inFlight, .hovering: return Theme.green
+        case .docked:              return Theme.blue
+        case .charging:            return Theme.warning
         }
     }
+
+    var isAirborne: Bool { self == .inFlight || self == .hovering }
 }
 
 struct Drone: Identifiable, Equatable {
@@ -122,17 +144,37 @@ struct Drone: Identifiable, Equatable {
     var name: String
     var status: DroneStatus
     var battery: Int
+    /// Last reported location. Drones without one stay off the map.
+    var position: GeoPoint? = nil
 }
 
-/// Holds UI-only state shared across tabs (drone callsigns show up everywhere).
+/// State shared across tabs: the fleet (drone callsigns show up everywhere),
+/// the selected tab and the rename sheet.
 final class PrototypeStore: ObservableObject {
-    @Published var drones: [Drone] = [
-        Drone(id: "MD-01", name: "Ember", status: .inFlight, battery: 82),
-        Drone(id: "MD-02", name: "Ash", status: .docked, battery: 64),
-        Drone(id: "MD-03", name: "Ridge", status: .charging, battery: 27)
-    ]
+    /// Whatever `feed` last reported. Empty until a fleet link is connected.
+    @Published private(set) var drones: [Drone] = []
     @Published var selectedTab: AppTab = .fleet
     @Published var renaming: Drone?
+
+    private let feed: FleetFeed
+    /// Callsigns given on this device, by drone ID, so feed updates don't undo them.
+    private var callsigns: [String: String] = [:]
+
+    init(feed: FleetFeed = NoFleetFeed()) {
+        self.feed = feed
+    }
+
+    /// Keeps `drones` in step with the feed for as long as the app is open.
+    @MainActor
+    func followFleet() async {
+        for await reported in feed.updates() {
+            drones = reported.map { drone in
+                var drone = drone
+                if let callsign = callsigns[drone.id] { drone.name = callsign }
+                return drone
+            }
+        }
+    }
 
     func name(at index: Int) -> String {
         drones.indices.contains(index) ? drones[index].name : "—"
@@ -141,6 +183,7 @@ final class PrototypeStore: ObservableObject {
     func rename(_ id: String, to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let i = drones.firstIndex(where: { $0.id == id }) else { return }
+        callsigns[id] = trimmed
         drones[i].name = trimmed
     }
 }
@@ -176,6 +219,7 @@ struct RootTabView: View {
             RenameDroneSheet(drone: drone)
                 .environmentObject(store)
         }
+        .task { await store.followFleet() }
     }
 }
 
@@ -294,6 +338,33 @@ struct Card<Content: View>: View {
             .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+    }
+}
+
+/// Placeholder card for a list with nothing in it yet.
+struct EmptyStateCard: View {
+    let icon: String
+    let title: String
+    let message: String
+
+    var body: some View {
+        Card {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(Theme.blue)
+                    .frame(width: 48, height: 48)
+                    .background(Theme.blue.opacity(0.12))
+                    .clipShape(Circle())
+                Text(title).font(.headline).foregroundColor(Theme.textPrimary)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
     }
 }
 
@@ -427,64 +498,58 @@ struct MapPlaceholder<Overlay: View>: View {
     }
 }
 
-struct DronePin: View {
-    let name: String
-    var hovering = false
-
-    var body: some View {
-        VStack(spacing: 3) {
-            ZStack {
-                Circle().fill(Theme.blue.opacity(0.2)).frame(width: 30, height: 30)
-                Circle()
-                    .fill(hovering ? Theme.blue : Theme.surface)
-                    .frame(width: 14, height: 14)
-                    .overlay(Circle().stroke(Theme.blue, lineWidth: 3))
-            }
-            Text(name)
-                .font(.caption2.weight(.semibold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Theme.surface)
-                .foregroundColor(Theme.textPrimary)
-                .clipShape(Capsule())
-        }
-    }
-}
-
 // MARK: - 01 Fleet
 
 struct FleetView: View {
     @EnvironmentObject private var store: PrototypeStore
     @State private var search = ""
 
+    private var countText: String {
+        "\(store.drones.count) drone\(store.drones.count == 1 ? "" : "s")"
+    }
+
+    private var matches: [Drone] {
+        let query = search.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return store.drones }
+        return store.drones.filter {
+            $0.name.localizedCaseInsensitiveContains(query) || $0.id.localizedCaseInsensitiveContains(query)
+        }
+    }
+
     var body: some View {
-        ScreenScaffold(title: "Fleet", subtitle: "3 drones · station 12") {
-            HStack(spacing: 10) {
-                HStack {
-                    Image(systemName: "magnifyingglass").foregroundColor(Theme.textSecondary)
-                    TextField("Search fleet…", text: $search)
+        ScreenScaffold(title: "Fleet", subtitle: "\(countText) · station 12") {
+            if store.drones.isEmpty {
+                EmptyStateCard(icon: "airplane.circle",
+                               title: "No drones connected",
+                               message: "Drones show up here with live status and battery once the fleet link is connected.")
+            } else {
+                HStack(spacing: 10) {
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundColor(Theme.textSecondary)
+                        TextField("Search fleet…", text: $search)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 44)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
+
+                    Button {} label: {
+                        Label("Filter", systemImage: "line.3.horizontal.decrease")
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .frame(height: 44)
+                            .background(Theme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    }
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 44)
-                .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
 
-                Button {} label: {
-                    Label("Filter", systemImage: "line.3.horizontal.decrease")
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 12)
-                        .frame(height: 44)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                SectionHeader(title: "\(countText) · \(store.drones.filter(\.status.isAirborne).count) in flight")
+
+                ForEach(matches) { drone in
+                    DroneCard(drone: drone)
                 }
-            }
-
-            SectionHeader(title: "\(store.drones.count) drones · 1 in flight")
-
-            ForEach(store.drones) { drone in
-                DroneCard(drone: drone)
             }
         } bottom: {
             BottomActionBar {
@@ -628,6 +693,12 @@ struct MissionSetupView: View {
 
             SectionHeader(title: "Assign drones")
             Card(padding: 10) {
+                if store.drones.isEmpty {
+                    Text("No drones connected yet.")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.textSecondary)
+                        .padding(6)
+                }
                 ForEach(store.drones) { drone in
                     SelectableRow(title: drone.name,
                                   detail: "\(drone.id) · batt \(drone.battery)%",
@@ -745,50 +816,25 @@ struct LiveMapView: View {
 }
 
 struct OverviewContent: View {
-    @EnvironmentObject private var store: PrototypeStore
+    @EnvironmentObject private var annotations: MapAnnotationStore
+
+    /// Total ground inside the boundaries drawn on the map.
+    private var areaText: String {
+        let squareMeters = annotations.boundaries.reduce(0) { $0 + IncidentSite.area(of: $1.points) }
+        guard squareMeters > 0 else { return "—" }
+        let squareMiles = squareMeters / 2_589_988
+        return squareMiles >= 0.1
+            ? String(format: "%.1f mi²", squareMiles)
+            : String(format: "%.1f ac", squareMeters / 4_046.86)
+    }
 
     var body: some View {
-        MapPlaceholder(height: 300) {
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Theme.green, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
-                        .background(Theme.green.opacity(0.08))
-                        .frame(width: w * 0.72, height: h * 0.62)
-                        .position(x: w * 0.5, y: h * 0.46)
-                    Text("SEARCH ZONE A")
-                        .font(.caption2.weight(.bold))
-                        .foregroundColor(Theme.green)
-                        .position(x: w * 0.26, y: h * 0.2)
-
-                    DronePin(name: store.name(at: 0)).position(x: w * 0.36, y: h * 0.44)
-                    DronePin(name: store.name(at: 1), hovering: true).position(x: w * 0.7, y: h * 0.62)
-
-                    VStack(spacing: 2) {
-                        Text("3").font(.headline.weight(.bold))
-                        Text("victims").font(.caption2)
-                    }
-                    .foregroundColor(.white)
-                    .frame(width: 58, height: 50)
-                    .background(Theme.danger)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .position(x: w * 0.6, y: h * 0.32)
-                }
-            }
-        }
-
-        HStack(spacing: 14) {
-            LegendItem(symbol: "circle", label: "in flight", color: Theme.blue)
-            LegendItem(symbol: "circle.fill", label: "hovering", color: Theme.blue)
-            LegendItem(symbol: "square.fill", label: "victim cluster", color: Theme.danger)
-        }
-        .font(.caption)
+        IncidentMapCard()
+        MapLegend()
 
         HStack(spacing: 10) {
             StatTile(label: "Wind", value: "14 mph NE", icon: "wind")
-            StatTile(label: "Area", value: "2.4 mi²", icon: "square.dashed")
+            StatTile(label: "Area", value: areaText, icon: "square.dashed")
             StatTile(label: "Elapsed", value: "00:18:42", icon: "clock")
         }
     }
@@ -897,22 +943,11 @@ struct FireContent: View {
     }
 }
 
-struct Detection: Identifiable {
-    let id: Int
-    let title: String
-    let coords: String
-    let confidence: Double
-}
-
 struct VictimContent: View {
     @EnvironmentObject private var store: PrototypeStore
     @State private var marked: Set<Int> = []
 
-    private let detections = [
-        Detection(id: 1, title: "Victim 01 · behind rubble", coords: "34.0501, -118.2402", confidence: 0.94),
-        Detection(id: 2, title: "Victim 02 · street level", coords: "34.0498, -118.2410", confidence: 0.71),
-        Detection(id: 3, title: "Possible · near vehicle", coords: "34.0507, -118.2395", confidence: 0.51)
-    ]
+    private let detections = Detection.zoneA
 
     var body: some View {
         GeometryReader { geo in
@@ -1132,41 +1167,23 @@ enum AlertFilter: String, CaseIterable, Identifiable {
     var id: Self { self }
 }
 
-struct AlertItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let time: String
-    let source: String
-    let icon: String
-    let color: Color
-    let urgent: Bool
-    let mine: Bool
-}
-
 struct AlertsView: View {
-    @EnvironmentObject private var store: PrototypeStore
+    @EnvironmentObject private var log: IncidentLog
     @State private var filter: AlertFilter = .all
 
-    private var items: [AlertItem] {
-        [
-            AlertItem(title: "Payload released — Victim 01", time: "14:22", source: "\(store.name(at: 0)) · water, trauma kit",
-                      icon: "shippingbox.fill", color: Theme.green, urgent: false, mine: true),
-            AlertItem(title: "Fire spread update sent to crew", time: "14:18", source: store.name(at: 0),
-                      icon: "flame.fill", color: Theme.warning, urgent: true, mine: true),
-            AlertItem(title: "3 victims detected in Zone A", time: "14:04", source: store.name(at: 1),
-                      icon: "person.3.fill", color: Theme.danger, urgent: true, mine: false),
-            AlertItem(title: "Battery below 30% — returning to base", time: "13:51", source: store.name(at: 2),
-                      icon: "battery.25", color: Theme.warning, urgent: false, mine: false),
-            AlertItem(title: "Mission launched · Wildfire · Zone A", time: "13:44", source: "dispatcher",
-                      icon: "paperplane.fill", color: Theme.blue, urgent: false, mine: true)
-        ]
+    private var filtered: [LogEntry] {
+        switch filter {
+        case .all:    return log.entries
+        case .urgent: return log.entries.filter(\.urgent)
+        case .mine:   return log.entries.filter(\.isMine)
+        }
     }
 
-    private var filtered: [AlertItem] {
+    private var emptyTitle: String {
         switch filter {
-        case .all:    return items
-        case .urgent: return items.filter { $0.urgent }
-        case .mine:   return items.filter { $0.mine }
+        case .all:    return "Nothing logged yet"
+        case .urgent: return "No urgent alerts"
+        case .mine:   return "Nothing from this device yet"
         }
     }
 
@@ -1177,29 +1194,16 @@ struct AlertsView: View {
             }
             .pickerStyle(.segmented)
 
-            Card(padding: 4) {
-                ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: item.icon)
-                            .foregroundColor(item.color)
-                            .frame(width: 34, height: 34)
-                            .background(item.color.opacity(0.14))
-                            .clipShape(Circle())
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack {
-                                Text(item.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(Theme.textPrimary)
-                                if item.urgent { StatusPill(text: "Urgent", color: Theme.danger) }
-                            }
-                            Text("\(item.time) · \(item.source)")
-                                .font(.caption)
-                                .foregroundColor(Theme.textSecondary)
-                        }
-                        Spacer(minLength: 0)
+            if filtered.isEmpty {
+                EmptyStateCard(icon: "bell",
+                               title: emptyTitle,
+                               message: "Pins and boundaries added on the map are logged here as they happen.")
+            } else {
+                Card(padding: 4) {
+                    ForEach(Array(filtered.enumerated()), id: \.element.id) { index, entry in
+                        LogEntryRow(entry: entry)
+                        if index < filtered.count - 1 { Divider().padding(.leading, 56) }
                     }
-                    .padding(10)
-                    if index < filtered.count - 1 { Divider().padding(.leading, 56) }
                 }
             }
         } bottom: {
@@ -1209,6 +1213,61 @@ struct AlertsView: View {
                 }
             }
         }
+        .task { await log.refresh() }
+        .refreshable { await log.refresh() }
+    }
+}
+
+struct LogEntryRow: View {
+    let entry: LogEntry
+
+    /// Time only for today's entries; older ones get the date too.
+    private var timeText: String {
+        let today = Calendar.current.isDateInToday(entry.createdAt)
+        return entry.createdAt.formatted(date: today ? .omitted : .abbreviated, time: .shortened)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            icon
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(entry.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Theme.textPrimary)
+                    if entry.urgent { StatusPill(text: "Urgent", color: Theme.danger) }
+                }
+                Text("\(timeText) · \(entry.isMine ? "you" : "other team") · \(entry.detail)")
+                    .font(.caption)
+                    .foregroundColor(Theme.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var icon: some View {
+        switch entry.kind {
+        case .pinPlaced:
+            if let category = entry.pinCategory {
+                HazardBadge(category: category, diameter: 34)
+            } else {
+                symbol("mappin", color: Theme.blue)
+            }
+        case .boundaryDrawn:
+            symbol("hexagon.fill", color: entry.colorHex.map { Color(hex: $0) } ?? Theme.green)
+        case .pinRemoved, .boundaryRemoved:
+            symbol("trash", color: Theme.textSecondary)
+        }
+    }
+
+    private func symbol(_ name: String, color: Color) -> some View {
+        Image(systemName: name)
+            .foregroundColor(color)
+            .frame(width: 34, height: 34)
+            .background(color.opacity(0.14))
+            .clipShape(Circle())
     }
 }
 
@@ -1258,6 +1317,12 @@ struct TeamView: View {
 
             SectionHeader(title: "Drone names")
             Card(padding: 4) {
+                if store.drones.isEmpty {
+                    Text("No drones connected yet.")
+                        .font(.subheadline)
+                        .foregroundColor(Theme.textSecondary)
+                        .padding(12)
+                }
                 ForEach(store.drones) { drone in
                     Button { store.renaming = drone } label: {
                         HStack {
@@ -1359,6 +1424,8 @@ struct MercyDrones_Previews: PreviewProvider {
                 .previewDisplayName("Dark")
         }
         .environmentObject(PrototypeStore())
+        .environmentObject(IncidentLog(fileURL: nil))
+        .environmentObject(MapAnnotationStore(fileURL: nil))
         .tint(Theme.blue)
     }
 }

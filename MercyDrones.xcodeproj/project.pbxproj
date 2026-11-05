@@ -8,12 +8,26 @@
 
 /* Begin PBXBuildFile section */
 		4D0000000000000000000007 /* UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000005 /* UI.swift */; };
+		4D0000000000000000000013 /* IncidentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0000000000000000000012 /* IncidentMap.swift */; };
+		4D0000000000000000000016 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4D0000000000000000000015 /* GoogleMaps */; };
+		4D0000000000000000000019 /* MapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D000000000000000000001A /* MapAnnotations.swift */; };
+		4D000000000000000000001E /* IncidentLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D000000000000000000001D /* IncidentLog.swift */; };
+		4D0000000000000000000020 /* FleetFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D000000000000000000001F /* FleetFeed.swift */; };
+		4D000000000000000000001B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D000000000000000000001C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0424BFD2309993DD00CC93A1 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		4D0000000000000000000004 /* MercyDrones.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MercyDrones.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D0000000000000000000005 /* UI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UI.swift; sourceTree = "<group>"; };
 		4D0000000000000000000006 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		4D0000000000000000000012 /* IncidentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentMap.swift; sourceTree = "<group>"; };
+		4D0000000000000000000017 /* Maps.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Maps.xcconfig; sourceTree = "<group>"; };
+		4D0000000000000000000018 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4D000000000000000000001A /* MapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapAnnotations.swift; sourceTree = "<group>"; };
+		4D000000000000000000001D /* IncidentLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentLog.swift; sourceTree = "<group>"; };
+		4D000000000000000000001F /* FleetFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetFeed.swift; sourceTree = "<group>"; };
+		4D000000000000000000001C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -21,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D0000000000000000000016 /* GoogleMaps in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -31,6 +46,14 @@
 			isa = PBXGroup;
 			children = (
 				4D0000000000000000000005 /* UI.swift */,
+				4D0000000000000000000012 /* IncidentMap.swift */,
+				4D000000000000000000001C /* Assets.xcassets */,
+				4D000000000000000000001A /* MapAnnotations.swift */,
+				4D000000000000000000001D /* IncidentLog.swift */,
+				4D000000000000000000001F /* FleetFeed.swift */,
+				4D0000000000000000000017 /* Maps.xcconfig */,
+				0424BFD2309993DD00CC93A1 /* Secrets.xcconfig */,
+				4D0000000000000000000018 /* Info.plist */,
 				4D0000000000000000000006 /* README.md */,
 				4D0000000000000000000003 /* Products */,
 			);
@@ -60,6 +83,9 @@
 			dependencies = (
 			);
 			name = MercyDrones;
+			packageProductDependencies = (
+				4D0000000000000000000015 /* GoogleMaps */,
+			);
 			productName = MercyDrones;
 			productReference = 4D0000000000000000000004 /* MercyDrones.app */;
 			productType = "com.apple.product-type.application";
@@ -72,7 +98,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					4D0000000000000000000008 = {
 						CreatedOnToolsVersion = 15.0;
@@ -88,6 +114,9 @@
 				Base,
 			);
 			mainGroup = 4D0000000000000000000002;
+			packageReferences = (
+				4D0000000000000000000014 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
+			);
 			productRefGroup = 4D0000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -102,6 +131,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D000000000000000000001B /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -113,6 +143,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D0000000000000000000007 /* UI.swift in Sources */,
+				4D0000000000000000000013 /* IncidentMap.swift in Sources */,
+				4D0000000000000000000019 /* MapAnnotations.swift in Sources */,
+				4D000000000000000000001E /* IncidentLog.swift in Sources */,
+				4D0000000000000000000020 /* FleetFeed.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,12 +203,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -224,11 +259,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -236,12 +272,17 @@
 		};
 		4D0000000000000000000010 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D0000000000000000000017 /* Maps.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UVYS439Y3X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MercyDrones;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Shows your position on the incident map so you can navigate to victims and drones.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -262,12 +303,17 @@
 		};
 		4D0000000000000000000011 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D0000000000000000000017 /* Maps.xcconfig */;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UVYS439Y3X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = MercyDrones;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Shows your position on the incident map so you can navigate to victims and drones.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -308,6 +354,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4D0000000000000000000014 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googlemaps/ios-maps-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4D0000000000000000000015 /* GoogleMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4D0000000000000000000014 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
+			productName = GoogleMaps;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4D0000000000000000000001 /* Project object */;
 }
