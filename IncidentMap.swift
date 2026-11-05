@@ -2,14 +2,15 @@
 //  IncidentMap.swift
 //  MercyDrones — live incident map
 //
-//  Everything map-related lives here: Zone A's coordinates, the markers built
-//  from the fleet, the in-page map card and the full-screen map. Positions are
-//  fixed prototype coordinates, but the map itself is the Google Maps SDK so
-//  the same map works once the app is brought over to Android.
+//  Everything map-related lives here: where the map opens, the live drone
+//  markers built from the fleet, the in-page map card and the full-screen map.
+//  Nothing is pre-placed: drones appear once the fleet link reports their
+//  positions (FleetFeed.swift), and everything else is pinned or drawn by
+//  responders. The map itself is the Google Maps SDK so the same map works
+//  once the app is brought over to Android.
 //
-//  Responders can also drop category pins and draw boundaries on the
-//  full-screen map. That data, its storage and its sync hook live in
-//  MapAnnotations.swift.
+//  Responders drop category pins and draw boundaries on the full-screen map.
+//  That data, its storage and its sync hook live in MapAnnotations.swift.
 //
 //  Staying inside Google's free tier:
 //  - Map loads through the native mobile SDK (iOS/Android) are unlimited and
@@ -39,7 +40,7 @@ struct GeoPoint: Equatable, Codable {
     let longitude: Double
 }
 
-/// Fixed prototype coordinates for Zone A (same area as the victim detections).
+/// Where the map opens. Only the camera starts here; nothing is drawn.
 enum IncidentSite {
     static let center = GeoPoint(latitude: 34.0502, longitude: -118.2403)
     /// Roughly how much ground the default view covers, edge to edge.
@@ -47,20 +48,18 @@ enum IncidentSite {
     /// Google zoom level that shows about `spanMeters` across a phone-width map.
     static let zoom: Float = 15.8
 
-    static let searchZone = [
-        GeoPoint(latitude: 34.0519, longitude: -118.2429),
-        GeoPoint(latitude: 34.0521, longitude: -118.2382),
-        GeoPoint(latitude: 34.0487, longitude: -118.2376),
-        GeoPoint(latitude: 34.0483, longitude: -118.2424)
-    ]
-
-    static let dronePositions = [
-        "MD-01": GeoPoint(latitude: 34.0509, longitude: -118.2416),
-        "MD-02": GeoPoint(latitude: 34.0493, longitude: -118.2389)
-    ]
-    static let hoveringDrones: Set<String> = ["MD-02"]
-
     private static let metersPerDegree = 111_320.0
+
+    /// Ground area inside a boundary, in square meters. Uses the same flat
+    /// projection as the offline map, which is accurate at incident scale.
+    static func area(of points: [GeoPoint]) -> Double {
+        guard points.count >= 3 else { return 0 }
+        // A spanMeters-wide canvas makes one point equal one meter.
+        let flat = points.map { project($0, into: CGSize(width: spanMeters, height: spanMeters)) }
+        let doubled = zip(flat, flat.dropFirst() + flat.prefix(1))
+            .reduce(0.0) { $0 + Double($1.0.x * $1.1.y - $1.1.x * $1.0.y) }
+        return abs(doubled) / 2
+    }
 
     /// Flat projection around Zone A, used by the offline map.
     static func project(_ point: GeoPoint, into size: CGSize) -> CGPoint {
@@ -88,7 +87,7 @@ struct Detection: Identifiable {
 
     var coords: String { String(format: "%.4f, %.4f", coordinate.latitude, coordinate.longitude) }
 
-    /// Shared by the Victims list and the map markers.
+    /// Mock detections for the Victims camera view. They aren't put on the map.
     static let zoneA = [
         Detection(id: 1, title: "Victim 01 · behind rubble",
                   coordinate: GeoPoint(latitude: 34.0501, longitude: -118.2402), confidence: 0.94),
@@ -100,7 +99,7 @@ struct Detection: Identifiable {
 }
 
 struct IncidentMarker: Identifiable {
-    enum Kind: Equatable { case drone, hoveringDrone, victim, hazard(PinCategory) }
+    enum Kind: Equatable { case drone, hoveringDrone, hazard(PinCategory) }
 
     let id: String
     let kind: Kind
@@ -122,7 +121,6 @@ struct IncidentMarker: Identifiable {
         switch kind {
         case .drone:         return "airplane"
         case .hoveringDrone: return "pause.fill"
-        case .victim:        return "person.fill"
         case .hazard:        return "mappin"
         }
     }
@@ -130,7 +128,6 @@ struct IncidentMarker: Identifiable {
     var color: Color {
         switch kind {
         case .drone, .hoveringDrone: return Theme.blue
-        case .victim:                return Theme.danger
         case .hazard(let category):  return category.color
         }
     }
@@ -149,25 +146,17 @@ struct IncidentMarker: Identifiable {
 }
 
 extension PrototypeStore {
-    /// Built on demand so renamed callsigns show up on the map.
+    /// Live drones that have reported a position. Built on demand so renamed
+    /// callsigns show up on the map.
     var incidentMarkers: [IncidentMarker] {
-        let dronePins = drones.compactMap { drone -> IncidentMarker? in
-            guard let position = IncidentSite.dronePositions[drone.id] else { return nil }
-            let hovering = IncidentSite.hoveringDrones.contains(drone.id)
+        drones.compactMap { drone -> IncidentMarker? in
+            guard let position = drone.position else { return nil }
             return IncidentMarker(id: drone.id,
-                                  kind: hovering ? .hoveringDrone : .drone,
+                                  kind: drone.status == .hovering ? .hoveringDrone : .drone,
                                   coordinate: position,
                                   title: drone.name,
-                                  detail: "\(drone.id) · \(hovering ? "Hovering" : drone.status.rawValue) · batt \(drone.battery)%")
+                                  detail: "\(drone.id) · \(drone.status.rawValue) · batt \(drone.battery)%")
         }
-        let victimPins = Detection.zoneA.map { d in
-            IncidentMarker(id: "victim-\(d.id)",
-                           kind: .victim,
-                           coordinate: d.coordinate,
-                           title: d.title,
-                           detail: String(format: "%@ · confidence %.2f", d.coords, d.confidence))
-        }
-        return dronePins + victimPins
     }
 }
 
@@ -297,7 +286,6 @@ private struct GoogleIncidentMap: UIViewRepresentable {
         map.settings.setAllGesturesEnabled(interactive)
         map.settings.consumesGesturesInView = interactive
         map.settings.compassButton = interactive
-        Self.drawSearchZone(on: map)
         context.coordinator.appliedFocus = focus
         return map
     }
@@ -322,27 +310,6 @@ private struct GoogleIncidentMap: UIViewRepresentable {
             return GMSCameraPosition(target: here, zoom: max(map.camera.zoom, IncidentSite.zoom))
         }
         return GMSCameraPosition(target: IncidentSite.center.clCoordinate, zoom: IncidentSite.zoom)
-    }
-
-    /// Light green fill plus a dashed outline, matching the legend.
-    private static func drawSearchZone(on map: GMSMapView) {
-        let green = UIColor(Theme.green)
-        let path = GMSMutablePath()
-        IncidentSite.searchZone.forEach { path.add($0.clCoordinate) }
-
-        let fill = GMSPolygon(path: path)
-        fill.fillColor = green.withAlphaComponent(0.12)
-        fill.strokeWidth = 0
-        fill.map = map
-
-        if let first = IncidentSite.searchZone.first { path.add(first.clCoordinate) }
-        let outline = GMSPolyline(path: path)
-        outline.strokeWidth = 2
-        outline.spans = GMSStyleSpans(path,
-                                      [GMSStrokeStyle.solidColor(green), GMSStrokeStyle.solidColor(.clear)],
-                                      [25, 15],
-                                      .rhumb)
-        outline.map = map
     }
 
     final class Coordinator: NSObject, GMSMapViewDelegate {
@@ -549,7 +516,7 @@ private enum PinImage {
 #endif
 
 /// Network-free stand-in used when there's no Google Maps key (and in
-/// previews). Same zone, pins and selection, drawn on the placeholder grid.
+/// previews). Same pins, boundaries and selection, drawn on the placeholder grid.
 private struct OfflineIncidentMap: View {
     let markers: [IncidentMarker]
     let boundaries: [IncidentBoundary]
@@ -560,7 +527,6 @@ private struct OfflineIncidentMap: View {
 
     var body: some View {
         GeometryReader { geo in
-            let zone = IncidentSite.searchZone.map { IncidentSite.project($0, into: geo.size) }
             // While pinning or drawing, taps fall through to the map underneath.
             let selectable = onMapTap == nil
             ZStack {
@@ -574,19 +540,6 @@ private struct OfflineIncidentMap: View {
                     }
                 MapGrid().stroke(Theme.border, lineWidth: 0.6)
                     .allowsHitTesting(false)
-
-                Path { path in
-                    path.addLines(zone)
-                    path.closeSubpath()
-                }
-                .fill(Theme.green.opacity(0.12))
-                .allowsHitTesting(false)
-                Path { path in
-                    path.addLines(zone)
-                    path.closeSubpath()
-                }
-                .stroke(Theme.green, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
-                .allowsHitTesting(false)
 
                 ForEach(boundaries) { boundary in
                     let shape = PolygonShape(points: boundary.points.map { IncidentSite.project($0, into: geo.size) })
@@ -840,7 +793,7 @@ struct FullScreenMapView: View {
         }
     }
 
-    /// Only responder pins can be deleted, not drones or victims.
+    /// Only responder pins can be deleted, not live drones.
     private var deleteSelectedPin: (() -> Void)? {
         guard let pin = selectedPin else { return nil }
         return {
@@ -1030,13 +983,16 @@ private struct MapEditBanner<Actions: View>: View {
 }
 
 struct MapLegend: View {
+    @EnvironmentObject private var store: PrototypeStore
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 14) {
-                LegendItem(symbol: "airplane.circle.fill", label: "drone", color: Theme.blue)
-                LegendItem(symbol: "pause.circle.fill", label: "hovering", color: Theme.blue)
-                LegendItem(symbol: "person.circle.fill", label: "victim", color: Theme.danger)
-                LegendItem(symbol: "square.dashed", label: "zone", color: Theme.green)
+            // Live drones only reach the map once the fleet link reports positions.
+            if !store.incidentMarkers.isEmpty {
+                HStack(spacing: 14) {
+                    LegendItem(symbol: "airplane.circle.fill", label: "live drone", color: Theme.blue)
+                    LegendItem(symbol: "pause.circle.fill", label: "hovering", color: Theme.blue)
+                }
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
